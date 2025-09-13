@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Payment Manager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            @apply bg-gray-100 text-gray-800;
+        }
+        .container-card {
+            @apply bg-white p-8 rounded-xl shadow-lg w-full max-w-2xl mx-auto;
+        }
+        /* Custom styles for the receipt for printing */
+        @media print {
+            body > *:not(#receipt-container) {
+                display: none;
+            }
+            #receipt-container {
+                display: block !important;
+                padding: 2rem;
+            }
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div id="app-container" class="container-card">
+
+        <h1 class="text-3xl font-bold text-center mb-6 text-gray-900">Student Payment Manager</h1>
+
+        <div class="mb-6 border-b pb-4 border-gray-200">
+            <h2 class="text-xl font-semibold mb-3">Student Database</h2>
+            <div id="loadingIndicator" class="text-center text-sm text-gray-500 mb-4">
+                Loading data...
+            </div>
+            <div class="flex flex-col md:flex-row gap-4 items-center">
+                <select id="admissionNoSelect" class="flex-1 p-3 rounded-lg border border-gray-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" disabled>
+                    <option value="">Select Admission No...</option>
+                </select>
+                <button id="searchButton" class="w-full md:w-auto px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition duration-300 ease-in-out shadow-md" disabled>
+                    Search
+                </button>
+            </div>
+        </div>
+
+        <div id="studentDetails" class="hidden">
+            <h2 class="text-xl font-semibold mb-3">Student Details</h2>
+            <div id="studentDataDisplay" class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm mb-6">
+                </div>
+            
+            <div class="border-t pt-4 border-gray-200">
+                <h2 class="text-xl font-semibold mb-3">Update Payment</h2>
+                <div class="flex flex-col md:flex-row gap-4 items-center mb-4">
+                    <select id="monthSelect" class="flex-1 p-3 rounded-lg border border-gray-300 bg-white">
+                        <option value="">Select Month...</option>
+                        <option value="January">January</option>
+                        <option value="February">February</option>
+                        <option value="March">March</option>
+                        <option value="April">April</option>
+                        <option value="May">May</option>
+                        <option value="June">June</option>
+                        <option value="July">July</option>
+                        <option value="August">August</option>
+                        <option value="September">September</option>
+                        <option value="October">October</option>
+                        <option value="November">November</option>
+                        <option value="December">December</option>
+                    </select>
+                    <input type="number" id="paymentAmountInput" placeholder="Enter Amount..." class="flex-1 p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="date" id="paymentDateInput" class="flex-1 p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <button id="updatePaymentButton" class="w-full md:w-auto px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition duration-300 ease-in-out shadow-md">
+                        Update Payment
+                    </button>
+                </div>
+            </div>
+
+            <div id="existingPaymentsSection" class="border-t pt-4 mt-6 border-gray-200 hidden">
+                <h2 class="text-xl font-semibold mb-3">Print Receipts</h2>
+                <div id="existingPaymentsList" class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    </div>
+            </div>
+            
+            <div id="downloadSection" class="border-t pt-4 mt-6 border-gray-200 hidden">
+                <button id="downloadButton" class="w-full px-6 py-3 bg-gray-800 text-white font-medium rounded-lg hover:bg-gray-900 transition duration-300 ease-in-out shadow-md">
+                    Download Updated Data (.csv)
+                </button>
+            </div>
+        </div>
+        
+        <div id="messageModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full">
+            <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+                <div class="mt-3 text-center">
+                    <h3 id="modalTitle" class="text-lg leading-6 font-medium text-gray-900"></h3>
+                    <div class="mt-2 px-7 py-3">
+                        <p id="modalMessage" class="text-sm text-gray-500"></p>
+                    </div>
+                    <div class="items-center px-4 py-3">
+                        <button id="closeModalButton" class="px-4 py-2 bg-blue-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            OK
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="receipt-container" class="hidden">
+        <div class="receipt p-8 border border-gray-300 rounded-lg shadow-xl">
+            <h1 class="text-2xl font-bold text-center mb-6">Payment Receipt</h1>
+            <div class="grid grid-cols-2 gap-y-2 mb-4">
+                <div><strong>Admission No:</strong> <span id="receiptAdmissionNo"></span></div>
+                <div><strong>Name:</strong> <span id="receiptName"></span></div>
+                <div><strong>Father's Name:</strong> <span id="receiptFatherName"></span></div>
+                <div><strong>Mobile:</strong> <span id="receiptMobile"></span></div>
+            </div>
+            <div class="border-t border-gray-200 pt-4">
+                <h2 class="text-xl font-semibold mb-2">Payment Details</h2>
+                <div class="flex justify-between font-bold mb-1">
+                    <span>Month</span>
+                    <span>Payment Date & Time</span>
+                    <span>Amount</span>
+                </div>
+                <div class="flex justify-between">
+                    <span id="receiptMonth"></span>
+                    <span id="receiptPaymentDate"></span>
+                    <span id="receiptPaymentAmount"></span>
+                </div>
+            </div>
+            <p class="text-center text-sm mt-6 text-gray-500">Thank you for your payment.</p>
+        </div>
+    </div>
+
+    <script>
+        // *** IMPORTANT ***
+        // Replace this URL with the raw URL of your CSV file on GitHub.
+        // It must be a raw link, which usually starts with raw.githubusercontent.com
+        const GITHUB_CSV_URL = 'https://raw.githubusercontent.com/google/gemini-pro-vision-example/main/your_data.csv';
+
+        const admissionNoSelect = document.getElementById('admissionNoSelect');
+        const searchButton = document.getElementById('searchButton');
+        const studentDetailsDiv = document.getElementById('studentDetails');
+        const studentDataDisplay = document.getElementById('studentDataDisplay');
+        const monthSelect = document.getElementById('monthSelect');
+        const paymentAmountInput = document.getElementById('paymentAmountInput');
+        const paymentDateInput = document.getElementById('paymentDateInput');
+        const updatePaymentButton = document.getElementById('updatePaymentButton');
+        const existingPaymentsSection = document.getElementById('existingPaymentsSection');
+        const existingPaymentsList = document.getElementById('existingPaymentsList');
+        const downloadSection = document.getElementById('downloadSection');
+        const downloadButton = document.getElementById('downloadButton');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+
+        let students = [];
+        let headers = [];
+        let currentStudent = null;
+
+        const messageModal = document.getElementById('messageModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalMessage = document.getElementById('modalMessage');
+        const closeModalButton = document.getElementById('closeModalButton');
+
+        function showMessage(title, message) {
+            modalTitle.textContent = title;
+            modalMessage.textContent = message;
+            messageModal.classList.remove('hidden');
+        }
+
+        closeModalButton.addEventListener('click', () => {
+            messageModal.classList.add('hidden');
+        });
+
+        const parseCSV = (csv) => {
+            const lines = csv.split('\n').filter(line => line.trim() !== '');
+            if (lines.length > 0) {
+                headers = lines[0].split(',').map(h => h.trim());
+                students = lines.slice(1).map(line => {
+                    const values = line.split(',');
+                    const student = {};
+                    headers.forEach((header, index) => {
+                        student[header] = values[index] ? values[index].trim() : '';
+                    });
+                    
+                    student.payments = {};
+                    const paymentMonths = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+                    paymentMonths.forEach(month => {
+                        const amountHeader = `${month}_Amount`;
+                        const dateHeader = `${month}_PaymentDate`;
+                        const amount = student[amountHeader];
+                        const date = student[dateHeader];
+                        if (amount && date) {
+                            student.payments[month] = { amount, date };
+                        }
+                        delete student[amountHeader];
+                        delete student[dateHeader];
+                    });
+                    return student;
+                });
+                return true;
+            }
+            return false;
+        };
+
+        const populateAdmissionNoDropdown = () => {
+            admissionNoSelect.innerHTML = '<option value="">Select Admission No...</option>';
+            const admissionNos = students.map(s => s['AdmissionNo']).filter(Boolean);
+            admissionNos.forEach(no => {
+                const option = document.createElement('option');
+                option.value = no;
+                option.textContent = no;
+                admissionNoSelect.appendChild(option);
+            });
+        };
+
+        const displayStudentDetails = (student) => {
+            studentDetailsDiv.classList.remove('hidden');
+            downloadSection.classList.remove('hidden');
+            studentDataDisplay.innerHTML = '';
+            
+            const fieldsToShow = ["AdmissionNo", "Roll No", "Name", "Father Name", "Gender", "Address", "DOB", "Mobile"];
+            fieldsToShow.forEach(field => {
+                if (student[field]) {
+                    const div = document.createElement('div');
+                    div.innerHTML = `<strong>${field.replace(/([A-Z])/g, ' $1').trim()}:</strong> ${student[field]}`;
+                    studentDataDisplay.appendChild(div);
+                }
+            });
+            displayExistingPayments(student);
+        };
+
+        const displayExistingPayments = (student) => {
+            existingPaymentsList.innerHTML = '';
+            existingPaymentsSection.classList.remove('hidden');
+            const paymentMonths = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            
+            let hasPayments = false;
+            paymentMonths.forEach(month => {
+                const payment = student.payments[month];
+                if (payment) {
+                    hasPayments = true;
+                    const button = document.createElement('button');
+                    button.textContent = `${month} (Paid)`;
+                    button.className = 'px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors duration-300';
+                    button.onclick = () => {
+                        printReceipt(student, month, payment.amount, payment.date);
+                    };
+                    existingPaymentsList.appendChild(button);
+                }
+            });
+
+            if (!hasPayments) {
+                existingPaymentsSection.classList.add('hidden');
+            }
+        };
+
+        const printReceipt = (student, month, amount, date) => {
+            document.getElementById('receiptAdmissionNo').textContent = student.AdmissionNo;
+            document.getElementById('receiptName').textContent = student.Name;
+            document.getElementById('receiptFatherName').textContent = student['Father Name'];
+            document.getElementById('receiptMobile').textContent = student.Mobile;
+            document.getElementById('receiptMonth').textContent = month;
+            document.getElementById('receiptPaymentDate').textContent = new Date(date).toLocaleString();
+            document.getElementById('receiptPaymentAmount').textContent = `₹${amount}`;
+            window.print();
+        };
+
+        const generateAndDownloadCSV = () => {
+            const baseHeaders = ["AdmissionNo", "Roll No", "Name", "Father Name", "Gender", "Address", "DOB", "Mobile"];
+            const paymentMonths = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            
+            const headers = [...baseHeaders];
+            paymentMonths.forEach(month => {
+                headers.push(`${month}_Amount`);
+                headers.push(`${month}_PaymentDate`);
+            });
+
+            let csvContent = headers.join(',') + '\n';
+            students.forEach(student => {
+                const row = [...baseHeaders.map(h => student[h])];
+                paymentMonths.forEach(month => {
+                    const payment = student.payments[month] || { amount: '', date: '' };
+                    row.push(payment.amount);
+                    row.push(payment.date);
+                });
+                csvContent += row.join(',') + '\n';
+            });
+            
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            if (link.download !== undefined) {
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', 'database2025.csv');
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        };
+
+        searchButton.addEventListener('click', () => {
+            const selectedAdmissionNo = admissionNoSelect.value;
+            if (!selectedAdmissionNo) {
+                showMessage("Selection Required", "Please select an admission number to search.");
+                return;
+            }
+            currentStudent = students.find(s => s['AdmissionNo'] === selectedAdmissionNo);
+            if (currentStudent) {
+                displayStudentDetails(currentStudent);
+            } else {
+                showMessage("Not Found", "Student not found.");
+            }
+        });
+
+        updatePaymentButton.addEventListener('click', () => {
+            if (!currentStudent) {
+                showMessage("No Student Selected", "Please search for a student first.");
+                return;
+            }
+
+            const month = monthSelect.value;
+            const amount = paymentAmountInput.value;
+            const date = paymentDateInput.value;
+
+            if (!month || !amount || !date) {
+                showMessage("Missing Information", "Please fill in all the payment details (Month, Amount, and Date).");
+                return;
+            }
+
+            currentStudent.payments[month] = { amount, date };
+
+            showMessage("Payment Updated", `Payment for ${month} has been updated.`);
+            displayExistingPayments(currentStudent);
+            
+            monthSelect.value = '';
+            paymentAmountInput.value = '';
+            paymentDateInput.value = '';
+        });
+
+        downloadButton.addEventListener('click', generateAndDownloadCSV);
+
+        // Fetch data from GitHub on page load
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const response = await fetch(GITHUB_CSV_URL);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const csvContent = await response.text();
+                if (parseCSV(csvContent)) {
+                    populateAdmissionNoDropdown();
+                    admissionNoSelect.disabled = false;
+                    searchButton.disabled = false;
+                    loadingIndicator.classList.add('hidden');
+                } else {
+                    showMessage("Database Error", "The CSV file is empty or has a formatting error. Please check the file on GitHub.");
+                    loadingIndicator.textContent = "Failed to load data.";
+                }
+            } catch (error) {
+                showMessage("Network Error", "Failed to fetch data from GitHub. Please check your internet connection or the URL.");
+                loadingIndicator.textContent = "Failed to load data.";
+            }
+        });
+
+    </script>
+</body>
+</html>
